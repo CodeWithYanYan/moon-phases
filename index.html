@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Lunar Phases | Interactive Moon Cycle Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 10% 20%, #030518, #000000);
+            font-family: 'Segoe UI', 'Poppins', 'Inter', system-ui, -apple-system, 'Roboto', sans-serif;
+            color: #f0f3ff;
+            line-height: 1.5;
+            scroll-behavior: smooth;
+        }
+
+        /* animated stars background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(2px 2px at 20px 30px, #fff, rgba(0,0,0,0)),
+                              radial-gradient(1px 1px at 60px 80px, #fffaec, rgba(0,0,0,0));
+            background-size: 200px 200px, 150px 150px;
+            background-repeat: repeat;
+            opacity: 0.35;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.8rem 2rem 3rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* header section */
+        .hero {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #FFE6B0, #FFB347, #C0D9FF);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+            color: #cdd9ff;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* === MAIN VISUALIZATION SECTION === */
+        .visualization {
+            background: rgba(5, 12, 30, 0.55);
+            backdrop-filter: blur(4px);
+            border-radius: 3rem;
+            padding: 1.8rem 1.5rem;
+            margin-bottom: 2.5rem;
+            border: 1px solid rgba(255, 220, 150, 0.25);
+            box-shadow: 0 20px 35px -15px rgba(0,0,0,0.6);
+        }
+
+        .orbit-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .moon-canvas-container {
+            background: radial-gradient(ellipse at 30% 40%, #0a1022, #010101);
+            border-radius: 48px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: transparent;
+            border-radius: 32px;
+            cursor: pointer;
+            margin: 0 auto;
+            box-shadow: 0 0 25px rgba(255,215,0,0.2);
+        }
+
+        .phase-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.7rem;
+            margin: 1.2rem 0 0.8rem;
+        }
+
+        .ctrl-btn {
+            background: rgba(20, 30, 55, 0.8);
+            border: 1px solid #ffcd7e;
+            color: #ffefcf;
+            font-weight: 500;
+            padding: 0.5rem 1.2rem;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(4px);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .ctrl-btn:hover {
+            background: #ffb347;
+            color: #030518;
+            border-color: white;
+            transform: scale(1.02);
+        }
+
+        .active-phase {
+            background: #ffb347;
+            color: #0a0f1f;
+            border-color: white;
+            box-shadow: 0 0 12px #ffb347;
+        }
+
+        .phase-title {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.7rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .phase-sub {
+            text-align: center;
+            color: #ffdd99;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        /* info cards grid */
+        .phase-details {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 2rem;
+            padding: 1.2rem 1.8rem;
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            border: 1px solid rgba(255, 200, 100, 0.3);
+        }
+
+        .detail-card {
+            background: #0f1425cc;
+            border-radius: 1.5rem;
+            padding: 0.8rem 1rem;
+            text-align: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #ffcf9a;
+        }
+
+        .detail-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 0.2rem;
+            color: white;
+        }
+
+        /* eight phases list (from doc) */
+        .phases-list {
+            margin-top: 2rem;
+            background: rgba(0,0,0,0.4);
+            border-radius: 2rem;
+            padding: 1.5rem;
+        }
+
+        .phases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        .phase-card {
+            background: #040a1acc;
+            border-left: 4px solid #ffb347;
+            padding: 0.7rem 1rem;
+            border-radius: 1.2rem;
+            transition: 0.1s linear;
+            cursor: pointer;
+        }
+
+        .phase-card:hover {
+            background: #ffb34733;
+            transform: translateX(4px);
+        }
+
+        .phase-name {
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .phase-type {
+            font-size: 0.7rem;
+            color: #ffcd94;
+        }
+
+        .story-section {
+            margin-top: 2.5rem;
+            background: linear-gradient(145deg, #0e142ccc, #03060fcc);
+            border-radius: 2rem;
+            padding: 1.5rem 2rem;
+            border: 1px solid #ffdead3a;
+        }
+
+        .story-section h3 {
+            font-size: 1.7rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #94a3d8;
+        }
+
+        @media (max-width: 700px) {
+            .container { padding: 0.8rem 1rem 2rem; }
+            .hero h1 { font-size: 2rem; }
+            .phase-title { font-size: 1.3rem; }
+        }
+
+        button {
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="hero">
+        <h1>🌙 Phases of the Moon</h1>
+        <p>A celestial dance of light & shadow | 8 phases cycle every 29.5 days</p>
+    </div>
+
+    <!-- Main interactive animation area -->
+    <div class="visualization">
+        <div class="orbit-stage">
+            <div class="moon-canvas-container">
+                <canvas id="moonCanvas" width="500" height="500" style="width:100%; max-width:500px; height:auto; aspect-ratio:1/1"></canvas>
+            </div>
+            <div class="phase-controls" id="phaseButtonsContainer">
+                <!-- dynamic JS generated buttons but we'll also populate manually for ease -->
+            </div>
+            <div class="phase-title" id="currentPhaseName">New Moon</div>
+            <div class="phase-sub" id="currentPhaseType">primary phase · invisible</div>
+        </div>
+
+        <!-- detailed data cards based on document -->
+        <div class="phase-details" id="dynamicDetails">
+            <div class="detail-card"><div class="detail-label">🌒 Moonrise</div><div class="detail-value" id="moonriseVal">around sunrise</div></div>
+            <div class="detail-card"><div class="detail-label">🌘 Moonset</div><div class="detail-value" id="moonsetVal">around sunset</div></div>
+            <div class="detail-card"><div class="detail-label">✨ Illumination</div><div class="detail-value" id="illumVal">0%</div></div>
+            <div class="detail-card"><div class="detail-label">🪐 Position in Space</div><div class="detail-value" id="positionVal">between Sun & Earth</div></div>
+            <div class="detail-card"><div class="detail-label">🧭 Orientation (NH)</div><div class="detail-value" id="orientVal">—</div></div>
+        </div>
+    </div>
+
+    <!-- All eight phases quick reference -->
+    <div class="phases-list">
+        <h3>📖 The Eight Lunar Phases</h3>
+        <div class="phases-grid" id="phaseGrid"></div>
+    </div>
+
+    <!-- Story from document -->
+    <div class="story-section">
+        <h3>🐇 Rabbit in the Moon · Story Time</h3>
+        <p style="margin-top: 12px; font-style: italic;">"A long time ago, a kind little rabbit sacrificed its pure heart to restore the Moon's fading light. The Moon Spirit accepted the offering, and from that night onward, the shape of the rabbit graced the moon's surface — watching over Earth every night."</p>
+        <p style="margin-top: 8px; font-size:0.85rem;">🌙 According to ancient folklore, the rabbit's silhouette reminds us of bravery and selflessness.</p>
+    </div>
+    <footer>Lunar cycle: New Moon → Waxing Crescent → First Quarter → Waxing Gibbous → Full Moon → Waning Gibbous → Third Quarter → Waning Crescent</footer>
+</div>
+
+<script>
+    (function() {
+        // -------- PHASE DATA (from the document content) ----------
+        const phases = [
+            { 
+                name: "New Moon", type: "primary", illumination: "0%", moonrise: "around sunrise", moonset: "around sunset",
+                position: "Moon between Sun and Earth", orientationNH: "not visible", orbitPos: 0,
+                desc: "Invisible phase, illuminated side faces away."
+            },
+            { 
+                name: "Waxing Crescent", type: "intermediate", illumination: "0% → 50%", moonrise: "morning", moonset: "afternoon",
+                position: "moving from New Moon to First Quarter", orientationNH: "right side lit", orbitPos: 0.125,
+                desc: "Silver sliver, grows daily."
+            },
+            { 
+                name: "First Quarter", type: "primary", illumination: "~50%", moonrise: "around midday", moonset: "around midnight",
+                position: "1/4 of orbit around Earth", orientationNH: "right side lit (half moon)", orbitPos: 0.25,
+                desc: "Half of illuminated half visible."
+            },
+            { 
+                name: "Waxing Gibbous", type: "intermediate", illumination: "50% → 100%", moonrise: "afternoon", moonset: "early morning",
+                position: "moving from First Quarter to Full Moon", orientationNH: "right side lit", orbitPos: 0.375,
+                desc: "More than half, very bright."
+            },
+            { 
+                name: "Full Moon", type: "primary", illumination: "~100%", moonrise: "around sunset", moonset: "around sunrise",
+                position: "Moon & Sun opposite sides of Earth", orientationNH: "fully lit", orbitPos: 0.5,
+                desc: "Entire dayside visible."
+            },
+            { 
+                name: "Waning Gibbous", type: "intermediate", illumination: "100% → 50%", moonrise: "evening", moonset: "morning",
+                position: "moving from Full Moon to Third Quarter", orientationNH: "left side lit", orbitPos: 0.625,
+                desc: "Shrinking illuminated portion."
+            },
+            { 
+                name: "Third Quarter", type: "primary", illumination: "~50%", moonrise: "around midnight", moonset: "around midday",
+                position: "3/4 of orbit around Earth", orientationNH: "left side lit", orbitPos: 0.75,
+                desc: "Also known as Last Quarter."
+            },
+            { 
+                name: "Waning Crescent", type: "intermediate", illumination: "50% → 0%", moonrise: "early morning", moonset: "afternoon",
+                position: "moving from Third Quarter to New Moon", orientationNH: "left side lit", orbitPos: 0.875,
+                desc: "Thin curve before New Moon."
+            }
+        ];
+
+        // current active index
+        let activeIdx = 0;   // start New Moon
+
+        // canvas & animation variables
+        const canvas = document.getElementById('moonCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = 500, height = 500;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, 500);
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            canvas.width = 500;
+            canvas.height = 500;
+            drawMoon();
+        }
+        window.addEventListener('resize', () => { resizeCanvas(); drawMoon(); });
+
+        // draw moon phase based on orbitPos (0 to 1) where 0 = New Moon, 0.5 = Full, and orientation & hemisphere (NH)
+        // For simplicity we simulate the illuminated fraction and terminator orientation.
+        // We'll compute phase angle: angle = orbitPos * 2*PI. Illuminated area from viewer = (1+cos(angle))/2
+        // But for visual moon: terminator line curves. For right side lit (waxing) we map angle 0..PI, for waning left side lit.
+        // Based on orbitPos we calculate illumination fraction and rotation of terminator.
+        function drawMoon() {
+            if (!ctx) return;
+            const phase = phases[activeIdx];
+            let t = phase.orbitPos;    // 0..1 cycle
+            // special handling for moon phase orientation: waxing (0->0.5) terminator on right side, waning (0.5->1) left side
+            // full illumination fraction: formula f = 0.5*(1 - cos(2*PI*t)) -> but actual seen illumination = 0.5*(1+cos(2*PI*(t+0.5)))?
+            // Actually standard: illumination = (1 + cos(phase_angle))/2, phase_angle = 2*PI*(t) offset where new=0, full=PI.
+            let angleRad = 2 * Math.PI * t;  // 0 new, PI full, 2PI new
+            let illuminationFraction = (1 + Math.cos(angleRad)) / 2;
+            // Ensure minimal rounding display.
+            
+            // Draw moon background (dark sphere)
+            ctx.clearRect(0, 0, 500, 500);
+            const centerX = 250, centerY = 250, radius = 210;
+            
+            // gradient for 3D effect
+            const grad = ctx.createLinearGradient(centerX - 60, centerY - 60, centerX + 70, centerY + 70);
+            grad.addColorStop(0, '#e0e9ff');
+            grad.addColorStop(0.7, '#bdbdbd');
+            grad.addColorStop(1, '#878fa0');
+            
+            // base moon circle (slightly greyish)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+            ctx.fillStyle = '#cfd8e6';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // draw illuminated side (lighter) & dark side via clipping or global composite?
+            // easier: create dark overlay with crescent clipping.
+            // Better: draw illuminated portion as crescent or gibbous by clipping to the lit area.
+            // We'll define terminator line offset: using angle of terminator based on orbital t.
+            // orientationNH: For waxing phases (t<0.5) lit part on right; waning (t>0.5) lit on left.
+            // The terminator line angle = 90 deg (vertical) but we pivot based on orientation.
+            let terminatorAngle = Math.PI / 2; // vertical line
+            let litSideRight = (t <= 0.5);    // waxing = right side lit; waning left side lit
+            
+            // For new moon (illumination very low or t~0) and full moon use full bright/dark
+            if (illuminationFraction < 0.02) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+                ctx.fillStyle = '#2a2e3c';
+                ctx.fill();
+                ctx.fillStyle = '#cbd5e6';
+                ctx.font = "bold 24px 'Segoe UI'";
+                ctx.shadowBlur = 0;
+                ctx.fillText("🌑", centerX-28, centerY+12);
+                return;
+            }
+            if (illuminationFraction > 0.98) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+                const brightGrd = ctx.createLinearGradient(centerX-40, centerY-40, centerX+50, centerY+50);
+                brightGrd.addColorStop(0, '#fff9e8');
+                brightGrd.addColorStop(1, '#ffe0b5');
+                ctx.fillStyle = brightGrd;
+                ctx.fill();
+                ctx.fillStyle = "#ffe9bb";
+                ctx.font = "26px system-ui";
+                ctx.fillText("🌕", centerX-28, centerY+12);
+                return;
+            }
+            
+            // Draw full moon base (dark background & light highlight)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+            ctx.fillStyle = '#40455e';
+            ctx.fill();
+            
+            // Now we draw lit portion by creating a clip for the lit region.
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+            ctx.clip();
+            
+            // Determine terminator offset X based on illuminationFraction and litSideRight
+            // Mapping: illumination fraction from 0 to 1 should map to terminator X shift: from -radius to +radius
+            // For waxing (right lit): lit region X > (centerX + offset) .
+            let offsetX = (1 - illuminationFraction) * radius * 2; // full range 0..2R becomes edge
+            let termX;
+            if (litSideRight) {
+                // right side lit: lit part from termX to +radius ; termX = centerX + radius - offsetX? Actually if offsetX=0 -> full lit? need mapping:
+                // illumination 0.5 -> termX = centerX ; illumination 1 -> termX = centerX - radius; illumination 0 -> termX = centerX+radius
+                termX = centerX + radius - (illuminationFraction * 2 * radius);
+            } else {
+                // left side lit: lit part from centerX - radius to termX ; termX = centerX - radius + (illuminationFraction * 2 * radius)
+                termX = centerX - radius + (illuminationFraction * 2 * radius);
+            }
+            termX = Math.min(centerX + radius, Math.max(centerX - radius, termX));
+            
+            // draw illuminated gradient region (light)
+            ctx.beginPath();
+            if (litSideRight) {
+                ctx.rect(termX, centerY - radius, centerX + radius - termX, radius * 2);
+            } else {
+                ctx.rect(centerX - radius, centerY - radius, termX - (centerX - radius), radius * 2);
+            }
+            const lightGrad = ctx.createLinearGradient(centerX-20, centerY-20, centerX+40, centerY+30);
+            lightGrad.addColorStop(0, '#fff2cf');
+            lightGrad.addColorStop(1, '#fcd48d');
+            ctx.fillStyle = lightGrad;
+            ctx.fill();
+            
+            // also add subtle craters effect
+            ctx.restore();
+            
+            // add surface texture dots
+            ctx.beginPath();
+            for (let i=0;i<80;i++) {
+                let ang = Math.random() * 2 * Math.PI;
+                let rad = radius * (0.3 + Math.random() * 0.6);
+                let x = centerX + Math.cos(ang)*rad;
+                let y = centerY + Math.sin(ang)*rad;
+                ctx.beginPath();
+                ctx.arc(x, y, Math.random() * 2 + 1, 0, 2*Math.PI);
+                ctx.fillStyle = `rgba(80,70,50,0.25)`;
+                ctx.fill();
+            }
+            ctx.fillStyle = '#ffefb0';
+            ctx.font = "22px system-ui";
+            ctx.shadowBlur = 0;
+            let emoji = illuminationFraction > 0.6 ? "🌙" : (illuminationFraction > 0.3 ? "🌓" : "🌒");
+            ctx.fillText(emoji, centerX-18, centerY+14);
+        }
+        
+        // Update UI (details, buttons, active state)
+        function updateUIAndDraw() {
+            const phase = phases[activeIdx];
+            document.getElementById('currentPhaseName').innerText = phase.name;
+            let typeLabel = phase.type === 'primary' ? '⭐ primary phase' : '🌙 intermediate phase';
+            document.getElementById('currentPhaseType').innerHTML = `${typeLabel} · ${phase.desc.substring(0, 60)}`;
+            document.getElementById('moonriseVal').innerText = phase.moonrise;
+            document.getElementById('moonsetVal').innerText = phase.moonset;
+            document.getElementById('illumVal').innerHTML = phase.illumination;
+            document.getElementById('positionVal').innerText = phase.position;
+            let orientationText = (phase.orientationNH === "right side lit" || phase.orientationNH === "left side lit") ? `${phase.orientationNH} (Northern Hemisphere)` : (phase.name==="New Moon" ? "Not applicable" : phase.orientationNH === "fully lit" ? "Full disc" : "—");
+            if (phase.name === "Full Moon") orientationText = "Entire dayside facing Earth";
+            if (phase.name === "New Moon") orientationText = "Dark side facing Earth";
+            document.getElementById('orientVal').innerText = orientationText;
+            
+            // highlight active button
+            document.querySelectorAll('.phase-btn').forEach((btn, idx) => {
+                if (parseInt(btn.dataset.idx) === activeIdx) btn.classList.add('active-phase');
+                else btn.classList.remove('active-phase');
+            });
+            drawMoon();
+        }
+        
+        // build buttons & phase grid
+        function buildControls() {
+            const container = document.getElementById('phaseButtonsContainer');
+            const gridContainer = document.getElementById('phaseGrid');
+            container.innerHTML = '';
+            gridContainer.innerHTML = '';
+            phases.forEach((ph, idx) => {
+                const btn = document.createElement('button');
+                btn.innerText = ph.name;
+                btn.classList.add('ctrl-btn');
+                btn.classList.add('phase-btn');
+                btn.dataset.idx = idx;
+                btn.addEventListener('click', () => {
+                    activeIdx = idx;
+                    updateUIAndDraw();
+                });
+                container.appendChild(btn);
+                
+                // grid card
+                const cardDiv = document.createElement('div');
+                cardDiv.classList.add('phase-card');
+                cardDiv.innerHTML = `<div class="phase-name">${ph.name}</div><div class="phase-type">${ph.type} · ${ph.illumination}</div>`;
+                cardDiv.addEventListener('click', () => {
+                    activeIdx = idx;
+                    updateUIAndDraw();
+                });
+                gridContainer.appendChild(cardDiv);
+            });
+        }
+        
+        // initial drawing and response
+        resizeCanvas();
+        buildControls();
+        updateUIAndDraw();
+        
+        // also animate a slow auto cycle? not required, but interactive is fine. No auto rotation needed.
+        // set click interaction - already done.
+        // optional: if user wants to click, all set.
+        // also add touch/mouse smooth redraw
+        canvas.addEventListener('click', () => {
+            // just fun - do nothing extra
+        });
+        
+        // orientation and resize
+        window.addEventListener('resize', () => {
+            drawMoon();
+        });
+    })();
+</script>
+</body>
+</html>
