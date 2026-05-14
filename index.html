@@ -72,7 +72,7 @@
         .simulator-panel {
             display: flex;
             flex-wrap: wrap;
-            background: #233853; /* Matches the reference diagram background */
+            background: #233853; 
             border-radius: 24px;
             overflow: hidden;
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
@@ -93,7 +93,7 @@
         .earth-view-section {
             flex: 1;
             min-width: 280px;
-            background: #172439; /* Darker blue for the side panel */
+            background: #172439; 
             padding: 2rem;
             display: flex;
             flex-direction: column;
@@ -113,8 +113,19 @@
         .earth-view-subtitle {
             font-size: 1rem;
             color: #94a3b8;
-            margin-bottom: 2rem;
+            margin-bottom: 0.5rem; /* Reduced to make room for description */
             text-align: center;
+        }
+        
+        /* NEW: Styles for the phase description */
+        .earth-view-desc {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            text-align: center;
+            max-width: 260px;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+            min-height: 3.5rem; /* Keeps the canvas from jumping around */
         }
 
         canvas {
@@ -245,6 +256,8 @@
         <div class="earth-view-section">
             <div class="earth-view-title" id="currentPhaseName">New Moon</div>
             <div class="earth-view-subtitle">As seen from Earth</div>
+            <!-- NEW: Definition Container -->
+            <div class="earth-view-desc" id="phaseDescription">The Moon is between Earth and the Sun, making the illuminated side face entirely away from us.</div>
             <canvas id="moonCanvas" class="moon-canvas" width="300" height="300"></canvas>
         </div>
     </div>
@@ -271,15 +284,16 @@
 <script>
     (function() {
         // -------- PHASE DATA ----------
+        // NEW: Added descriptions to each phase object
         const phases = [
-            { name: "New Moon", type: "primary", illumination: "0%", moonrise: "around sunrise", moonset: "around sunset", position: "Moon between Sun and Earth", orientationNH: "not visible", orbitPos: 0 },
-            { name: "Waxing Crescent", type: "intermediate", illumination: "0% → 50%", moonrise: "morning", moonset: "afternoon", position: "moving from New Moon to First Quarter", orientationNH: "right side lit", orbitPos: 0.125 },
-            { name: "First Quarter", type: "primary", illumination: "~50%", moonrise: "around midday", moonset: "around midnight", position: "1/4 of orbit around Earth", orientationNH: "right side lit", orbitPos: 0.25 },
-            { name: "Waxing Gibbous", type: "intermediate", illumination: "50% → 100%", moonrise: "afternoon", moonset: "early morning", position: "moving from First Quarter to Full Moon", orientationNH: "right side lit", orbitPos: 0.375 },
-            { name: "Full Moon", type: "primary", illumination: "~100%", moonrise: "around sunset", moonset: "around sunrise", position: "Moon & Sun opposite sides of Earth", orientationNH: "fully lit", orbitPos: 0.5 },
-            { name: "Waning Gibbous", type: "intermediate", illumination: "100% → 50%", moonrise: "evening", moonset: "morning", position: "moving from Full Moon to Third Quarter", orientationNH: "left side lit", orbitPos: 0.625 },
-            { name: "Third Quarter", type: "primary", illumination: "~50%", moonrise: "around midnight", moonset: "around midday", position: "3/4 of orbit around Earth", orientationNH: "left side lit", orbitPos: 0.75 },
-            { name: "Waning Crescent", type: "intermediate", illumination: "50% → 0%", moonrise: "early morning", moonset: "afternoon", position: "moving from Third Quarter to New Moon", orientationNH: "left side lit", orbitPos: 0.875 }
+            { name: "New Moon", type: "primary", illumination: "0%", moonrise: "around sunrise", moonset: "around sunset", position: "Moon between Sun and Earth", orientationNH: "not visible", orbitPos: 0, description: "The Moon is between Earth and the Sun, making the illuminated side face entirely away from us." },
+            { name: "Waxing Crescent", type: "intermediate", illumination: "0% → 50%", moonrise: "morning", moonset: "afternoon", position: "moving from New Moon to First Quarter", orientationNH: "right side lit", orbitPos: 0.125, description: "A small sliver of the right side becomes visible as the Moon begins its journey around Earth." },
+            { name: "First Quarter", type: "primary", illumination: "~50%", moonrise: "around midday", moonset: "around midnight", position: "1/4 of orbit around Earth", orientationNH: "right side lit", orbitPos: 0.25, description: "Exactly half of the Moon's visible surface is illuminated. It has completed one-quarter of its orbit." },
+            { name: "Waxing Gibbous", type: "intermediate", illumination: "50% → 100%", moonrise: "afternoon", moonset: "early morning", position: "moving from First Quarter to Full Moon", orientationNH: "right side lit", orbitPos: 0.375, description: "Most of the Moon's visible face is illuminated and continues to grow fuller each night." },
+            { name: "Full Moon", type: "primary", illumination: "~100%", moonrise: "around sunset", moonset: "around sunrise", position: "Moon & Sun opposite sides of Earth", orientationNH: "fully lit", orbitPos: 0.5, description: "Earth is between the Moon and the Sun, allowing us to see the entire illuminated daytime side." },
+            { name: "Waning Gibbous", type: "intermediate", illumination: "100% → 50%", moonrise: "evening", moonset: "morning", position: "moving from Full Moon to Third Quarter", orientationNH: "left side lit", orbitPos: 0.625, description: "The illuminated portion begins to shrink, with the dark edge creeping in from the right." },
+            { name: "Third Quarter", type: "primary", illumination: "~50%", moonrise: "around midnight", moonset: "around midday", position: "3/4 of orbit around Earth", orientationNH: "left side lit", orbitPos: 0.75, description: "The opposite half of the Moon is illuminated compared to the First Quarter." },
+            { name: "Waning Crescent", type: "intermediate", illumination: "50% → 0%", moonrise: "early morning", moonset: "afternoon", position: "moving from Third Quarter to New Moon", orientationNH: "left side lit", orbitPos: 0.875, description: "Only a small sliver on the left side remains illuminated before the cycle starts over." }
         ];
 
         let activeIdx = 0; // Starts at New Moon
@@ -358,8 +372,7 @@
             ctx.textAlign = "left"; // reset
         }
 
-        // 2. Draw the "As seen from Earth" View (Monochromatic)
-       // 2. Draw the "As seen from Earth" View (Perfect Crescent Shapes)
+        // 2. Draw the "As seen from Earth" View (Perfect Crescent Shapes)
         function drawMoon() {
             const canvas = document.getElementById('moonCanvas');
             const ctx = canvas.getContext('2d');
@@ -455,10 +468,14 @@
                 ctx.fill();
             }
         }
+        
         // 3. Update UI text and trigger canvas redraws
         function updateUIAndDraw() {
             const phase = phases[activeIdx];
             document.getElementById('currentPhaseName').innerText = phase.name;
+            // NEW: Update the description text based on the active phase
+            document.getElementById('phaseDescription').innerText = phase.description;
+            
             document.getElementById('moonriseVal').innerText = phase.moonrise;
             document.getElementById('moonsetVal').innerText = phase.moonset;
             document.getElementById('illumVal').innerHTML = phase.illumination;
