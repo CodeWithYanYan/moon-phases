@@ -359,87 +359,102 @@
         }
 
         // 2. Draw the "As seen from Earth" View (Monochromatic)
+       // 2. Draw the "As seen from Earth" View (Perfect Crescent Shapes)
         function drawMoon() {
             const canvas = document.getElementById('moonCanvas');
             const ctx = canvas.getContext('2d');
             const phase = phases[activeIdx];
             let t = phase.orbitPos;    
             let angleRad = 2 * Math.PI * t;  
-            let illuminationFraction = (1 + Math.cos(angleRad)) / 2;
             
             ctx.clearRect(0, 0, 300, 300);
             const centerX = 150, centerY = 150, radius = 130;
             
-            // Base moon circle (Dark unlit side)
+            // 1. Base moon circle (Dark unlit side)
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
             ctx.fillStyle = '#1a1a1a'; 
             ctx.fill();
             
-            let litSideRight = (t <= 0.5);    
-            
-            // New Moon: Invisible/Dark phase
-            if (illuminationFraction < 0.02) {
+            // Special Case: New Moon
+            if (t === 0 || t === 1) {
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
                 ctx.fillStyle = '#0a0a0a'; 
                 ctx.fill();
                 return;
             }
-            // Full Moon: Fully lit silver/white phase
-            if (illuminationFraction > 0.98) {
+
+            // Create lighting gradient for the illuminated side
+            const lightGrad = ctx.createLinearGradient(centerX-40, centerY-40, centerX+40, centerY+40);
+            lightGrad.addColorStop(0, '#ffffff'); 
+            lightGrad.addColorStop(1, '#a6a6a6');
+
+            // Special Case: Full Moon
+            if (t === 0.5) {
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
-                const brightGrd = ctx.createLinearGradient(centerX-20, centerY-20, centerX+30, centerY+30);
-                brightGrd.addColorStop(0, '#ffffff'); 
-                brightGrd.addColorStop(1, '#cccccc'); 
-                ctx.fillStyle = brightGrd;
+                ctx.fillStyle = lightGrad;
                 ctx.fill();
+                drawCraters(ctx, centerX, centerY, radius);
                 return;
             }
-            
-            // Draw Illuminated Silver region
+
             ctx.save();
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
-            ctx.clip();
+            ctx.clip(); // Keep all drawing inside the moon's circle
             
-            let offsetX = (1 - illuminationFraction) * radius * 2; 
-            let termX;
-            if (litSideRight) {
-                termX = centerX + radius - (illuminationFraction * 2 * radius);
+            let isWaxing = t < 0.5;
+            let isCrescent = (t > 0 && t < 0.25) || (t > 0.75 && t < 1);
+            
+            // 2. Draw the illuminated half-circle
+            ctx.beginPath();
+            if (isWaxing) {
+                // Lit on the right half
+                ctx.arc(centerX, centerY, radius, -Math.PI/2, Math.PI/2);
             } else {
-                termX = centerX - radius + (illuminationFraction * 2 * radius);
+                // Lit on the left half
+                ctx.arc(centerX, centerY, radius, Math.PI/2, -Math.PI/2);
             }
-            termX = Math.min(centerX + radius, Math.max(centerX - radius, termX));
+            ctx.fillStyle = lightGrad;
+            ctx.fill();
+
+            // 3. Draw the curved terminator shadow (This makes the perfect crescent!)
+            let ellipseWidth = radius * Math.abs(Math.cos(angleRad));
             
             ctx.beginPath();
-            if (litSideRight) {
-                ctx.rect(termX, centerY - radius, centerX + radius - termX, radius * 2);
+            ctx.ellipse(centerX, centerY, ellipseWidth, radius, 0, 0, 2 * Math.PI);
+            
+            // If it's a Crescent, the shadow eats into the light (Dark ellipse)
+            // If it's a Gibbous, the light bulges into the shadow (Light ellipse)
+            if (isCrescent) {
+                ctx.fillStyle = '#1a1a1a';
             } else {
-                ctx.rect(centerX - radius, centerY - radius, termX - (centerX - radius), radius * 2);
+                ctx.fillStyle = lightGrad;
             }
-            const lightGrad = ctx.createLinearGradient(centerX-10, centerY-10, centerX+20, centerY+20);
-            lightGrad.addColorStop(0, '#ffffff'); 
-            lightGrad.addColorStop(1, '#a6a6a6'); 
-            ctx.fillStyle = lightGrad;
             ctx.fill();
             ctx.restore();
             
-            // Surface craters (Neutral grey shadows)
+            // Add surface details
+            drawCraters(ctx, centerX, centerY, radius);
+        }
+
+        // Helper function: Fixed craters so they don't randomly jump around when you click!
+        function drawCraters(ctx, centerX, centerY, radius) {
             ctx.beginPath();
-            for (let i=0; i<60; i++) {
-                let ang = Math.random() * 2 * Math.PI;
-                let rad = radius * (0.3 + Math.random() * 0.6);
-                let x = centerX + Math.cos(ang)*rad;
-                let y = centerY + Math.sin(ang)*rad;
+            for (let i = 0; i < 60; i++) {
+                // Using a mathematical pattern instead of Math.random() for stable placement
+                let ang = (i * 137.5) * Math.PI / 180; 
+                let rad = radius * (0.3 + (i % 10) / 15);
+                let x = centerX + Math.cos(ang) * rad;
+                let y = centerY + Math.sin(ang) * rad;
                 ctx.beginPath();
-                ctx.arc(x, y, Math.random() * 1.5 + 0.5, 0, 2*Math.PI);
-                ctx.fillStyle = `rgba(0, 0, 0, 0.25)`; 
+                ctx.arc(x, y, (i % 3) + 0.5, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(0, 0, 0, 0.20)`; 
                 ctx.fill();
             }
         }
-
         // 3. Update UI text and trigger canvas redraws
         function updateUIAndDraw() {
             const phase = phases[activeIdx];
